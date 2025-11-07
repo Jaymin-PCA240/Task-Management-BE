@@ -1,6 +1,9 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
+import { log } from '../utils/logger';
 
-export const connectDB = async (uri: string): Promise<void> => {
+export const connectDB = async (): Promise<void> => {
+  const uri = process.env.MONGO_URI || '';
   await mongoose.connect(uri);
-  console.log("✅ MongoDB connected successfully");
+  log.info('MongoDB connected');
 };
+
