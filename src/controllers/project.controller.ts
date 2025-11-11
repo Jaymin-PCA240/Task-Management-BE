@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import APIResponse from '../helper/apiResponse';
 import { Project } from '../models/Project';
 import { ActivityLog } from '../models/ActivityLog';
+import { User } from '../models/User';
 
 export const createProject = async (req: Request, res: Response) => {
   try {
@@ -48,5 +49,25 @@ export const deleteProject = async (req: Request, res: Response) => {
     return APIResponse(res, true, 200, 'Project deleted');
   } catch (err) {
     return APIResponse(res, false, 500, 'Delete failed', err);
+  }
+};
+
+export const inviteMember = async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return APIResponse(res, false, 404, "User not found");
+    const project = await Project.findById(projectId);
+    if (!project) return APIResponse(res, false, 404, "Project not found");
+    if (!project.members.includes(user._id)) {
+      project.members.push(user._id);
+      await project.save();
+      // @ts-expect-error
+      await ActivityLog.create({ project: project._id, user: req.user.id, action: "member_invited", meta: { invitedUser: user._id } });
+    }
+    return APIResponse(res, true, 200, "Member invited", { user });
+  } catch (err) {
+    return APIResponse(res, false, 500, "Invite failed", err);
   }
 };

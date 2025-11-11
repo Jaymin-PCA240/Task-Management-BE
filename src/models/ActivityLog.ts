@@ -8,11 +8,14 @@ export interface IActivityLog extends Document {
   createdAt: Date;
 }
 
-const activitySchema = new Schema<IActivityLog>({
-  project: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
-  user: { type: Schema.Types.ObjectId, ref: 'User' },
-  action: { type: String, required: true },
-  meta: { type: Schema.Types.Mixed },
-}, { timestamps: true });
+const activitySchema = new Schema<IActivityLog>(
+  {
+    project: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
+    user: { type: Schema.Types.ObjectId, ref: 'User' },
+    action: { type: String, required: true },
+    meta: { type: Schema.Types.Mixed },
+  },
+  { timestamps: true },
+);
 
 export const ActivityLog = mongoose.model<IActivityLog>('ActivityLog', activitySchema);
