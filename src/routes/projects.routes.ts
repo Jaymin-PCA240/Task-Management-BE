@@ -5,8 +5,8 @@ import { createProject, listProjects, updateProject, deleteProject } from '../co
 const router = Router();
 
 router.get('/get-projects', auth, listProjects);
-router.post('/', auth, createProject);
-router.patch('/:id', auth, updateProject);
+router.post('/create-project', auth, createProject);
+router.patch('/update-project/:id', auth, updateProject);
 router.delete('/:id', auth, deleteProject);
 
 export default router;

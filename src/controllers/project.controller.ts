@@ -20,7 +20,7 @@ export const listProjects = async (req: Request, res: Response) => {
   try {
     // @ts-expect-error
     const userId = req.user.id;
-    const projects = await Project.find({ members: userId }).populate('owner', 'name email');
+    const projects = await Project.find({ members: userId }).populate('owner', 'name email').sort({ createdAt: -1 });
     return APIResponse(res, true, 200, 'Projects fetched', projects);
   } catch (err) {
     return APIResponse(res, false, 500, 'Fetch projects failed', err);
