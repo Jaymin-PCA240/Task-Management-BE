@@ -5,6 +5,8 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { connectDB } from './config/db';
 import authRoutes from './routes/auth.routes';
+import projectsRoutes from './routes/projects.routes';
+import tasksRoutes from './routes/tasks.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { notFound } from './middlewares/notFound';
 import { log } from './utils/logger';
@@ -28,6 +30,8 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 // routes
 app.use('/api/auth', authRoutes);
+app.use('/api/projects', projectsRoutes);
+app.use('/api/tasks', tasksRoutes);
 
 // 404 + error handler
 app.use(notFound);
