@@ -10,6 +10,7 @@ import tasksRoutes from './routes/tasks.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { notFound } from './middlewares/notFound';
 import { log } from './utils/logger';
+import activityRoutes from './routes/activity.routes';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -32,6 +33,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectsRoutes);
 app.use('/api/tasks', tasksRoutes);
+app.use("/api/activities", activityRoutes);
 
 // 404 + error handler
 app.use(notFound);

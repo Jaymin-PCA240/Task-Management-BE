@@ -5,8 +5,8 @@ import { ActivityLog } from '../models/ActivityLog';
 
 export const createTask = async (req: Request, res: Response) => {
   try {
-    const { title, description, project, assignees } = req.body;
-    const t = await Task.create({ title, description, project, assignees, status: 'todo' });
+    const { title, description, project, assignees, status } = req.body;
+    const t = await Task.create({ title, description, project, assignees, status });
     
     await ActivityLog.create({
       project,

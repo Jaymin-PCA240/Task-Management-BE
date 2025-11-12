@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.ethereal.email',
@@ -27,7 +27,16 @@ export const sendOTPEmail = async (to: string, otp: string) => {
   await transporter.sendMail({
     from: process.env.FROM_EMAIL,
     to,
-    subject: "Password reset code",
+    subject: 'Password reset code',
+    html,
+  });
+};
+
+export const inviteMemberEmail = async (to: string, subject: string, html: any) => {
+  await transporter.sendMail({
+    from: process.env.FROM_EMAIL,
+    to,
+    subject,
     html,
   });
 };
