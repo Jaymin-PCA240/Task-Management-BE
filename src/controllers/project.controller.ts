@@ -3,6 +3,7 @@ import APIResponse from '../helper/apiResponse';
 import { Project } from '../models/Project';
 import { ActivityLog } from '../models/ActivityLog';
 import { User } from '../models/User';
+import { Task } from '../models/Task';
 
 export const createProject = async (req: Request, res: Response) => {
   try {
@@ -43,7 +44,11 @@ export const updateProject = async (req: Request, res: Response) => {
 export const deleteProject = async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
-    await Project.findByIdAndDelete(id);
+    const project = await Project.findByIdAndDelete(id);
+    if (!project) {
+      return APIResponse(res, false, 404, "Project not found");
+    }
+    await Task.deleteMany({ project: id });
     // @ts-expect-error
     await ActivityLog.create({ project: id, user: req.user.id, action: 'project_deleted' });
     return APIResponse(res, true, 200, 'Project deleted');
@@ -69,5 +74,16 @@ export const inviteMember = async (req: Request, res: Response) => {
     return APIResponse(res, true, 200, "Member invited", { user });
   } catch (err) {
     return APIResponse(res, false, 500, "Invite failed", err);
+  }
+};
+
+export const getProjectMembers = async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+    const project = await Project.findById(projectId).populate("members", "name email");
+    if (!project) return APIResponse(res, false, 404, "Project not found");
+    return APIResponse(res, true, 200, "Project members fetched", project.members);
+  } catch (err) {
+    return APIResponse(res, false, 500, "Fetch project members failed", err);
   }
 };

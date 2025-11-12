@@ -24,7 +24,7 @@ const taskSchema = new Schema<ITask>(
   {
     title: { type: String, required: true },
     description: String,
-    status: { type: String, enum: ['todo', 'inprogress', 'inreview', 'done'], default: 'todo' },
+    status: { type: String, enum: ['todo', 'in-progress', 'in-review', 'done'], default: 'todo' },
     project: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
     assignees: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     comments: [commentSchema],

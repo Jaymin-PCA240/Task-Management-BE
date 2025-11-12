@@ -6,13 +6,13 @@ import { User } from '../models/User';
 import { RefreshToken } from '../models/RefreshToken';
 import APIResponse from '../helper/apiResponse';
 import { HttpStatusCode } from '../helper/enum';
-import { OTP } from "../models/OTP";
-import { generateNumericOTP, hashOTP } from "../utils/otp";
-import { sendOTPEmail } from "../utils/mailer";
+import { OTP } from '../models/OTP';
+import { generateNumericOTP, hashOTP } from '../utils/otp';
+import { sendOTPEmail } from '../utils/mailer';
 
 const OTP_EXPIRES_MIN = Number(process.env.OTP_EXPIRES_MIN || 10);
-const RESET_TOKEN_EXPIRES_IN = process.env.RESET_TOKEN_EXPIRES_IN || "15m";
-const RESET_SECRET = process.env.JWT_RESET_SECRET || "reset-secret";
+const RESET_TOKEN_EXPIRES_IN = process.env.RESET_TOKEN_EXPIRES_IN || '15m';
+const RESET_SECRET = process.env.JWT_RESET_SECRET || 'reset-secret';
 
 // Helpers to sign tokens
 const signAccessToken = (user: { id: string; role?: string }) => {
@@ -28,7 +28,6 @@ const signRefreshToken = (user: { id: string }) => {
 
   return jwt.sign({ id: user.id }, secret, options);
 };
-
 
 const registerSchema = Joi.object({
   name: Joi.string().min(2).required(),
@@ -219,12 +218,12 @@ function parseDuration(str: string) {
 export const forgotPassword = async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
-    if (!email) return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, "Email is required");
+    if (!email) return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, 'Email is required');
 
     const user = await User.findOne({ email });
     if (!user) {
-    console.log("user",user)
-      return APIResponse(res, false, HttpStatusCode.NOT_FOUND, "Email not exist!");
+      console.log('user', user);
+      return APIResponse(res, false, HttpStatusCode.NOT_FOUND, 'Email not exist!');
     }
     // create OTP
     const otp = generateNumericOTP(6);
@@ -239,71 +238,106 @@ export const forgotPassword = async (req: Request, res: Response) => {
     try {
       await sendOTPEmail(email, otp);
     } catch (e) {
-      console.error("sendOTPEmail error:", e);
-      return APIResponse(res, true, HttpStatusCode.BAD_GATEWAY, "OTP sent Failed! Internal server error");
+      console.error('sendOTPEmail error:', e);
+      return APIResponse(
+        res,
+        true,
+        HttpStatusCode.BAD_GATEWAY,
+        'OTP sent Failed! Internal server error',
+      );
     }
 
-    return APIResponse(res, true, HttpStatusCode.OK, "OTP sent to email (if it exists)");
+    return APIResponse(res, true, HttpStatusCode.OK, 'OTP sent to email (if it exists)');
   } catch (err) {
     console.error(err);
-    return APIResponse(res, false, HttpStatusCode.INTERNAL_SERVER_ERROR, "Failed to process request");
+    return APIResponse(
+      res,
+      false,
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      'Failed to process request',
+    );
   }
 };
 
 export const verifyOtp = async (req: Request, res: Response) => {
   try {
     const { email, otp } = req.body;
-    if (!email || !otp) return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, "Email and OTP required");
+    if (!email || !otp)
+      return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, 'Email and OTP required');
 
     const record = await OTP.findOne({ email });
-    if (!record) return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, "OTP not found or expired");
+    if (!record)
+      return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, 'OTP not found or expired');
 
     if (record.expiresAt < new Date()) {
       await OTP.deleteMany({ email });
-      return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, "OTP expired");
+      return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, 'OTP expired');
     }
 
     const otpHash = hashOTP(otp);
     if (otpHash !== record.otpHash) {
-      return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, "Invalid OTP");
+      return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, 'Invalid OTP');
     }
 
     // OTP valid -> delete records and issue reset token
     await OTP.deleteMany({ email });
 
-    const resetToken = jwt.sign({ email }, RESET_SECRET, { expiresIn: RESET_TOKEN_EXPIRES_IN as any });
+    const resetToken = jwt.sign({ email }, RESET_SECRET, {
+      expiresIn: RESET_TOKEN_EXPIRES_IN as any,
+    });
 
-    return APIResponse(res, true, HttpStatusCode.OK, "OTP verified", { resetToken });
+    return APIResponse(res, true, HttpStatusCode.OK, 'OTP verified', { resetToken });
   } catch (err) {
     console.error(err);
-    return APIResponse(res, false, HttpStatusCode.INTERNAL_SERVER_ERROR, "Failed to verify OTP");
+    return APIResponse(res, false, HttpStatusCode.INTERNAL_SERVER_ERROR, 'Failed to verify OTP');
   }
 };
 
 export const resetPassword = async (req: Request, res: Response) => {
   try {
     const { resetToken, password } = req.body;
-    if (!resetToken || !password) return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, "Token and password required");
+    if (!resetToken || !password)
+      return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, 'Token and password required');
 
     let payload: any;
     try {
       payload = jwt.verify(resetToken, RESET_SECRET);
     } catch (e) {
-      return APIResponse(res, false, HttpStatusCode.UNAUTHORIZED, "Invalid or expired reset token");
+      return APIResponse(res, false, HttpStatusCode.UNAUTHORIZED, 'Invalid or expired reset token');
     }
 
     const email = payload.email;
     const user = await User.findOne({ email });
-    if (!user) return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, "User not found");
+    if (!user) return APIResponse(res, false, HttpStatusCode.BAD_REQUEST, 'User not found');
 
     const hashed = await bcrypt.hash(password, 10);
     user.password = hashed;
     await user.save();
 
-    return APIResponse(res, true, HttpStatusCode.OK, "Password reset successful");
+    return APIResponse(res, true, HttpStatusCode.OK, 'Password reset successful');
   } catch (err) {
     console.error(err);
-    return APIResponse(res, false, HttpStatusCode.INTERNAL_SERVER_ERROR, "Failed to reset password");
+    return APIResponse(
+      res,
+      false,
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
+      'Failed to reset password',
+    );
   }
 };
 
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    // @ts-expect-error
+    const userId = req.user.id;
+    const { name } = req.body;
+
+    const user = await User.findByIdAndUpdate(userId, { name }, { new: true });
+
+    return APIResponse(res, true, 200, 'Profile updated', {
+      user: { id: user?._id, name: user?.name, email: user?.email, role: user?.role },
+    });
+  } catch (err) {
+    return APIResponse(res, false, 500, 'Update failed', err);
+  }
+};

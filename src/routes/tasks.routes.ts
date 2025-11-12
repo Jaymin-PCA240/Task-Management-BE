@@ -4,11 +4,11 @@ import { createTask, moveTask, commentTask, listTasksByProject, updateTask, dele
 
 const router = Router();
 
-router.post('/', auth, createTask);
+router.post('/create-task', auth, createTask);
 router.patch('/:id/move', auth, moveTask);
 router.post('/:id/comment', auth, commentTask);
-router.get("/project/:projectId", auth, listTasksByProject);
-router.put("/:id", auth, updateTask);
-router.delete("/:id", auth, deleteTask);
+router.get("/task-by-project/:projectId", auth, listTasksByProject);
+router.put("/update-task/:id", auth, updateTask);
+router.delete("/delete-task/:id", auth, deleteTask);
 
 export default router;
