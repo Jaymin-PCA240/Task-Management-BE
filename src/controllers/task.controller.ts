@@ -11,6 +11,7 @@ export const createTask = async (req: Request, res: Response) => {
     await task.populate([
       { path: 'comments.user', select: 'name email' },
       { path: 'assignees', select: 'name email' },
+      { path: 'project', select: 'name owner' },
     ])
 
     await ActivityLog.create({
@@ -44,6 +45,7 @@ export const updateTask = async (req: Request, res: Response) => {
     await task.populate([
       { path: 'comments.user', select: 'name email' },
       { path: 'assignees', select: 'name email' },
+      { path: 'project', select: 'name owner' },
     ])
 
     await ActivityLog.create({
@@ -67,6 +69,7 @@ export const moveTask = async (req: Request, res: Response) => {
     const updated = await Task.findByIdAndUpdate(id, { status }, { new: true }).populate([
       { path: 'comments.user', select: 'name email' },
       { path: 'assignees', select: 'name email' },
+      { path: 'project', select: 'name owner' },
     ]);
 
     await ActivityLog.create({
@@ -92,7 +95,11 @@ export const commentTask = async (req: Request, res: Response) => {
     task.comments.push({ user: req.user.id, text });
     await task.save();
 
-    await task.populate([{ path: 'comments.user', select: 'name email' }]);
+    await task.populate([
+      { path: 'comments.user', select: 'name email' },
+      { path: 'assignees', select: 'name email' },
+      { path: 'project', select: 'name owner' },
+    ]);
 
     await ActivityLog.create({
       project: task.project,
@@ -127,7 +134,11 @@ export const editComment = async (req: Request, res: Response) => {
     comment.text = text;
     await task.save();
 
-    await task.populate('comments.user', 'name email');
+    await task.populate([
+      { path: 'comments.user', select: 'name email' },
+      { path: 'assignees', select: 'name email' },
+      { path: 'project', select: 'name owner' },
+    ]);
     return APIResponse(res, true, 200, 'Comment updated', task);
   } catch (err) {
     return APIResponse(res, false, 500, 'Edit failed', err);
@@ -153,7 +164,11 @@ export const deleteComment = async (req: Request, res: Response) => {
     comment.deleteOne();
     await task.save();
 
-    await task.populate('comments.user', 'name email');
+    await task.populate([
+      { path: 'comments.user', select: 'name email' },
+      { path: 'assignees', select: 'name email' },
+      { path: 'project', select: 'name owner' },
+    ]);
     return APIResponse(res, true, 200, 'Comment deleted', task);
   } catch (err) {
     return APIResponse(res, false, 500, 'Delete failed', err);

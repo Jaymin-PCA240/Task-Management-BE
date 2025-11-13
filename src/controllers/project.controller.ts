@@ -165,13 +165,17 @@ export const searchUsersToInvite = async (req: Request, res: Response) => {
   }
 };
 
-export const getProjectMembers = async (req: Request, res: Response) => {
+export const getProjectDetails = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
-    const project = await Project.findById(projectId).populate('members', 'name email');
+    const project = await Project.findById(projectId).populate([
+      { path: 'members', select: 'name email' },
+      { path: 'owner', select: 'name email' },
+    ]);
+
     if (!project) return APIResponse(res, false, 404, 'Project not found');
-    return APIResponse(res, true, 200, 'Project members fetched', project.members);
+    return APIResponse(res, true, 200, 'Project details fetched', project);
   } catch (err) {
-    return APIResponse(res, false, 500, 'Fetch project members failed', err);
+    return APIResponse(res, false, 500, 'Fetch project details failed', err);
   }
 };
