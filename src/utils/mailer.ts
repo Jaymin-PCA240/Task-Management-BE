@@ -40,3 +40,12 @@ export const inviteMemberEmail = async (to: string, subject: string, html: any) 
     html,
   });
 };
+
+export const removeMemberEmail = async (to: string, subject: string, html: any) => {
+  await transporter.sendMail({
+    from: process.env.FROM_EMAIL,
+    to,
+    subject,
+    html,
+  });
+};

@@ -4,7 +4,7 @@ import { Project } from '../models/Project';
 import { ActivityLog } from '../models/ActivityLog';
 import { User } from '../models/User';
 import { Task } from '../models/Task';
-import { inviteMemberEmail } from '../utils/mailer';
+import { inviteMemberEmail, removeMemberEmail } from '../utils/mailer';
 
 export const createProject = async (req: Request, res: Response) => {
   try {
@@ -177,5 +177,43 @@ export const getProjectDetails = async (req: Request, res: Response) => {
     return APIResponse(res, true, 200, 'Project details fetched', project);
   } catch (err) {
     return APIResponse(res, false, 500, 'Fetch project details failed', err);
+  }
+};
+
+export const removeProjectMember = async (req: Request, res: Response) => {
+  try {
+    const { id, memberId } = req.params;
+
+    const project = await Project.findById(id);
+    if (!project) return APIResponse(res, false, 404, "Project not found");
+
+    if (project.owner.toString() === memberId) {
+      return APIResponse(res, false, 400, "Cannot remove the project owner");
+    }
+
+    project.members = project.members.filter(
+      (m: any) => m.toString() !== memberId
+    );
+    await project.save();
+
+    const user = await User.findById(memberId);
+    if (user) {
+      await removeMemberEmail(
+        user.email,
+        `Removed from project "${project.name}"`,
+        `Hello ${user.name},\n\nYou have been removed from the project "${project.name}".`
+      );
+    }
+
+    await ActivityLog.create({
+      project: id,
+      user: memberId,
+      action: "member_removed",
+      meta: { email: user?.email },
+    });
+
+    return APIResponse(res, true, 200, "Member removed and email sent");
+  } catch (err) {
+    return APIResponse(res, false, 500, "Failed to remove member", err);
   }
 };
