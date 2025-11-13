@@ -6,8 +6,13 @@ import { ActivityLog } from '../models/ActivityLog';
 export const createTask = async (req: Request, res: Response) => {
   try {
     const { title, description, project, assignees, status } = req.body;
-    const t = await Task.create({ title, description, project, assignees, status });
-    
+    const task = await Task.create({ title, description, project, assignees, status });
+
+    await task.populate([
+      { path: 'comments.user', select: 'name email' },
+      { path: 'assignees', select: 'name email' },
+    ])
+
     await ActivityLog.create({
       project,
       // @ts-expect-error
@@ -15,7 +20,7 @@ export const createTask = async (req: Request, res: Response) => {
       action: 'task_created',
       meta: { title },
     });
-    return APIResponse(res, true, 201, 'Task created', t);
+    return APIResponse(res, true, 201, 'Task created', task);
   } catch (err) {
     return APIResponse(res, false, 500, 'Create task failed', err);
   }
@@ -26,25 +31,30 @@ export const updateTask = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { title, description, assignees, status } = req.body;
 
-    const t = await Task.findById(id);
-    if (!t) return APIResponse(res, false, 404, 'Task not found');
+    const task = await Task.findById(id);
+    if (!task) return APIResponse(res, false, 404, 'Task not found');
 
-    if (title) t.title = title;
-    if (description) t.description = description;
-    if (assignees) t.assignees = assignees;
-    if (status) t.status = status;
+    if (title) task.title = title;
+    if (description) task.description = description;
+    if (assignees) task.assignees = assignees;
+    if (status) task.status = status;
 
-    await t.save();
+    await task.save();
+
+    await task.populate([
+      { path: 'comments.user', select: 'name email' },
+      { path: 'assignees', select: 'name email' },
+    ])
 
     await ActivityLog.create({
-      project: t.project,
+      project: task.project,
       // @ts-expect-error
       user: req.user.id,
       action: 'task_updated',
-      meta: { title: t.title },
+      meta: { title: task.title },
     });
 
-    return APIResponse(res, true, 200, 'Task updated', t);
+    return APIResponse(res, true, 200, 'Task updated', task);
   } catch (err) {
     return APIResponse(res, false, 500, 'Update task failed', err);
   }
@@ -54,8 +64,11 @@ export const moveTask = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const updated = await Task.findByIdAndUpdate(id, { status }, { new: true });
-    
+    const updated = await Task.findByIdAndUpdate(id, { status }, { new: true }).populate([
+      { path: 'comments.user', select: 'name email' },
+      { path: 'assignees', select: 'name email' },
+    ]);
+
     await ActivityLog.create({
       project: updated!.project,
       // @ts-expect-error
@@ -73,22 +86,77 @@ export const commentTask = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { text } = req.body;
-    const t = await Task.findById(id);
-    if (!t) return APIResponse(res, false, 404, 'Task not found');
+    const task = await Task.findById(id);
+    if (!task) return APIResponse(res, false, 404, 'Task not found');
     // @ts-expect-error
-    t.comments.push({ user: req.user.id, text });
-    await t.save();
-    
+    task.comments.push({ user: req.user.id, text });
+    await task.save();
+
+    await task.populate([{ path: 'comments.user', select: 'name email' }]);
+
     await ActivityLog.create({
-      project: t.project,
+      project: task.project,
       // @ts-expect-error
       user: req.user.id,
       action: 'task_commented',
       meta: { text },
     });
-    return APIResponse(res, true, 200, 'Comment added', t);
+    return APIResponse(res, true, 200, 'Comment added', task);
   } catch (err) {
     return APIResponse(res, false, 500, 'Comment failed', err);
+  }
+};
+
+export const editComment = async (req: Request, res: Response) => {
+  try {
+    const { id, commentId } = req.params;
+    const { text } = req.body;
+    // @ts-expect-error
+    const userId = req.user.id;
+
+    const task = await Task.findById(id);
+    if (!task) return APIResponse(res, false, 404, 'Task not found');
+
+    const comment = task.comments.id(commentId);
+    if (!comment) return APIResponse(res, false, 404, 'Comment not found');
+
+    // Only owner can edit
+    if (comment.user.toString() !== userId)
+      return APIResponse(res, false, 403, 'Not authorized to edit');
+
+    comment.text = text;
+    await task.save();
+
+    await task.populate('comments.user', 'name email');
+    return APIResponse(res, true, 200, 'Comment updated', task);
+  } catch (err) {
+    return APIResponse(res, false, 500, 'Edit failed', err);
+  }
+};
+
+export const deleteComment = async (req: Request, res: Response) => {
+  try {
+    const { id, commentId } = req.params;
+    // @ts-expect-error
+    const userId = req.user.id;
+
+    const task = await Task.findById(id);
+    if (!task) return APIResponse(res, false, 404, 'Task not found');
+
+    const comment = task.comments.id(commentId);
+    if (!comment) return APIResponse(res, false, 404, 'Comment not found');
+
+    // Only owner can delete
+    if (comment.user.toString() !== userId)
+      return APIResponse(res, false, 403, 'Not authorized to delete');
+
+    comment.deleteOne();
+    await task.save();
+
+    await task.populate('comments.user', 'name email');
+    return APIResponse(res, true, 200, 'Comment deleted', task);
+  } catch (err) {
+    return APIResponse(res, false, 500, 'Delete failed', err);
   }
 };
 
@@ -117,9 +185,15 @@ export const deleteTask = async (req: Request, res: Response) => {
 export const listTasksByProject = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
-    const tasks = await Task.find({ project: projectId }).populate("assignees", "name email").sort({ createdAt: -1 });
-    return APIResponse(res, true, 200, "Tasks fetched", tasks);
+    const tasks = await Task.find({ project: projectId })
+      .populate([
+        { path: 'comments.user', select: 'name email' },
+        { path: 'assignees', select: 'name email' },
+        { path: 'project', select: 'name owner' },
+      ])
+      .sort({ createdAt: -1 });
+    return APIResponse(res, true, 200, 'Tasks fetched', tasks);
   } catch (err) {
-    return APIResponse(res, false, 500, "Fetch tasks failed", err);
+    return APIResponse(res, false, 500, 'Fetch tasks failed', err);
   }
 };
