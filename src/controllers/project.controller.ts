@@ -217,3 +217,42 @@ export const removeProjectMember = async (req: Request, res: Response) => {
     return APIResponse(res, false, 500, "Failed to remove member", err);
   }
 };
+
+export const getDashboardStats = async (req: Request, res: Response) => {
+  try {
+    // @ts-expect-error
+    const userId = req.user.id;
+
+    const totalProjects = await Project.countDocuments({
+      $or: [{ owner: userId }, { members: userId }],
+    });
+
+    const totalTasks = await Task.countDocuments({
+      assignees: userId,
+    });
+
+    const completedTasks = await Task.countDocuments({
+      assignees: userId,
+      status: "done",
+    });
+
+    const completedPercentage =
+      totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    const totalInvitations = await Project.countDocuments({
+      members: userId,
+      owner: { $ne: userId },
+    });
+
+    return APIResponse(res, true, 200, "Dashboard data fetched", {
+      totalProjects,
+      totalTasks,
+      completedTasks,
+      completedPercentage,
+      totalInvitations,
+    });
+  } catch (error) {
+    console.error("Dashboard fetch error:", error);
+    return APIResponse(res, false, 500, "Error fetching dashboard data", error);
+  }
+};
