@@ -200,7 +200,24 @@ export const deleteTask = async (req: Request, res: Response) => {
 export const listTasksByProject = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.params;
-    const tasks = await Task.find({ project: projectId })
+    const { search, filterStatus, filterAssignee } = req.query;
+    const filter = { project: projectId };
+
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (filterStatus && filterStatus !== "all") {
+      filter.status = filterStatus;
+    }
+
+    if (filterAssignee && filterAssignee !== "all") {
+      filter.assignees = filterAssignee;
+    }
+    const tasks = await Task.find(filter)
       .populate([
         { path: 'comments.user', select: 'name email' },
         { path: 'assignees', select: 'name email' },
