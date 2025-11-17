@@ -5,6 +5,7 @@ import { ActivityLog } from '../models/ActivityLog';
 import { User } from '../models/User';
 import { Task } from '../models/Task';
 import { inviteMemberEmail, removeMemberEmail } from '../utils/mailer';
+import Invitation from '../models/Invitation';
 
 export const createProject = async (req: Request, res: Response) => {
   try {
@@ -72,65 +73,6 @@ export const deleteProject = async (req: Request, res: Response) => {
     return APIResponse(res, true, 200, 'Project deleted');
   } catch (err) {
     return APIResponse(res, false, 500, 'Delete failed', err);
-  }
-};
-
-export const inviteMember = async (req: Request, res: Response) => {
-  try {
-    const { email } = req.body;
-    const {projectId} = req.params;
-    // @ts-expect-error
-    const inviterId = req.user.id;
-
-    const project = await Project.findById(projectId).populate('members', '_id email name');
-    if (!project) return APIResponse(res, false, 404, 'Project not found');
-
-    const inviter = await User.findById(inviterId);
-    const invitedUser = await User.findOne({ email });
-    if (!invitedUser) return APIResponse(res, false, 404, 'User not found');
-
-    // check if already member
-    if (project.members.some((m: any) => m._id.toString() === invitedUser._id.toString())) {
-      return APIResponse(res, false, 400, 'User already a member');
-    }
-
-    project.members.push(invitedUser._id);
-    await project.save();
-
-    await ActivityLog.create({
-      project: projectId,
-      user: inviterId,
-      action: 'member_invited',
-      meta: { invited: invitedUser.email },
-    });
-
-    const inviteHtml = `
-      <div style="font-family: Arial, sans-serif; line-height:1.5">
-        <h2>Project Invitation - TaskFlow</h2>
-        <p>Hello <strong>${invitedUser.name}</strong>,</p>
-        <p>You’ve been invited to join the project <strong>${project.name}</strong> by <strong>${inviter?.name}</strong>.</p>
-        <p>Log in to your account to access the project:</p>
-        <a href="${process.env.FRONTEND_URL}/login" style="display:inline-block; background-color:#2563eb; color:white; padding:10px 18px; text-decoration:none; border-radius:5px;">
-          Open Project
-        </a>
-        <p style="margin-top:16px; color:#555">If you didn’t expect this invitation, you can ignore this email.</p>
-        <hr/>
-        <small>— TaskFlow Team</small>
-      </div>
-    `;
-
-    await inviteMemberEmail(
-      invitedUser.email,
-      `You're invited to join project "${project.name}"`,
-      inviteHtml,
-    );
-
-    return APIResponse(res, true, 200, 'Member invited successfully', {
-      email: invitedUser.email,
-    });
-  } catch (err) {
-    console.error(err);
-    return APIResponse(res, false, 500, 'Invite failed', err);
   }
 };
 
@@ -243,9 +185,9 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const completedPercentage =
       totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-    const totalInvitations = await Project.countDocuments({
-      members: userId,
-      owner: { $ne: userId },
+    const totalInvitations = await Invitation.countDocuments({
+      invitedUser: userId,
+      status: "pending",
     });
 
     return APIResponse(res, true, 200, "Dashboard data fetched", {

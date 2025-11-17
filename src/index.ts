@@ -7,6 +7,7 @@ import { connectDB } from './config/db';
 import authRoutes from './routes/auth.routes';
 import projectsRoutes from './routes/projects.routes';
 import tasksRoutes from './routes/tasks.routes';
+import invitationRoutes from './routes/invitation.routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { notFound } from './middlewares/notFound';
 import { log } from './utils/logger';
@@ -36,6 +37,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectsRoutes);
 app.use('/api/tasks', tasksRoutes);
 app.use("/api/activities", activityRoutes);
+app.use("/api/invitations", invitationRoutes);
 
 // 404 + error handler
 app.use(notFound);
