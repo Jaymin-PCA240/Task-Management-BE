@@ -222,7 +222,6 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      console.log('user', user);
       return APIResponse(res, false, HttpStatusCode.NOT_FOUND, 'Email not exist!');
     }
     // create OTP

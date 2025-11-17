@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import APIResponse from '../helper/apiResponse';
 import { Task } from '../models/Task';
 import { ActivityLog } from '../models/ActivityLog';
+import { io } from '../index';
 
 export const createTask = async (req: Request, res: Response) => {
   try {
@@ -21,6 +22,7 @@ export const createTask = async (req: Request, res: Response) => {
       action: 'task_created',
       meta: { title },
     });
+    io.emit("taskCreated", task); 
     return APIResponse(res, true, 201, 'Task created', task);
   } catch (err) {
     return APIResponse(res, false, 500, 'Create task failed', err);
@@ -55,7 +57,7 @@ export const updateTask = async (req: Request, res: Response) => {
       action: 'task_updated',
       meta: { title: task.title },
     });
-
+    io.emit("taskUpdated", task);
     return APIResponse(res, true, 200, 'Task updated', task);
   } catch (err) {
     return APIResponse(res, false, 500, 'Update task failed', err);
@@ -79,6 +81,8 @@ export const moveTask = async (req: Request, res: Response) => {
       action: 'task_moved',
       meta: { status },
     });
+    io.emit("taskUpdated", updated);
+
     return APIResponse(res, true, 200, 'Task moved', updated);
   } catch (err) {
     return APIResponse(res, false, 500, 'Move failed', err);
@@ -190,7 +194,7 @@ export const deleteTask = async (req: Request, res: Response) => {
       action: 'task_deleted',
       meta: { title: t.title },
     });
-
+    io.emit("taskDeleted", t._id);
     return APIResponse(res, true, 200, 'Task deleted successfully', null);
   } catch (err) {
     return APIResponse(res, false, 500, 'Delete task failed', err);

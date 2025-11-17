@@ -104,7 +104,6 @@ export const inviteMember = async (req: Request, res: Response) => {
       meta: { invited: invitedUser.email },
     });
 
-    // 📧 Send Invite Email
     const inviteHtml = `
       <div style="font-family: Arial, sans-serif; line-height:1.5">
         <h2>Project Invitation - TaskFlow</h2>
@@ -195,6 +194,11 @@ export const removeProjectMember = async (req: Request, res: Response) => {
       (m: any) => m.toString() !== memberId
     );
     await project.save();
+
+    await Task.updateMany(
+      { project: id, assignees: memberId }, 
+      { $unset: { assignees: [] } }          
+    );
 
     const user = await User.findById(memberId);
     if (user) {

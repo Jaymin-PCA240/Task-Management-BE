@@ -3,15 +3,21 @@ import nodemailer from 'nodemailer';
 const transporter = nodemailer.createTransport({
   host: 'smtp.ethereal.email',
   port: 587,
-  // secure: false,
   auth: {
-    user: 'viviane.littel@ethereal.email',
-    pass: 'mB8X3TbbD1MVUkrzwp',
+    user: 'osborne.dickens83@ethereal.email',
+    pass: 'tpfT1emsxBcgSxfRK2',
   },
-  // tls: {
-  //   rejectUnauthorized: false, // <-- Allow self-signed or invalid certs (only for dev)
-  // },
 });
+
+// const transporter = nodemailer.createTransport({
+//   host: "smtp.gmail.com",
+//   port: 465,
+//   secure: true,
+//   auth: {
+//     user: process.env.SMTP_USER,
+//     pass: process.env.SMTP_PASS,
+//   },
+// });
 
 export const sendOTPEmail = async (to: string, otp: string) => {
   const html = `

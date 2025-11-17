@@ -11,6 +11,8 @@ import { errorHandler } from './middlewares/errorHandler';
 import { notFound } from './middlewares/notFound';
 import { log } from './utils/logger';
 import activityRoutes from './routes/activity.routes';
+import http from "http";                  
+import { Server } from "socket.io";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -39,11 +41,27 @@ app.use("/api/activities", activityRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
+const server = http.createServer(app);      
+
+const io = new Server(server, {           
+  cors: { origin: "*" },
+});
+
+io.on("connection", (socket) => {
+  console.log("🟢 Socket connected:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("🔴 Socket disconnected:", socket.id);
+  });
+});
+
+export { io };
+
 // start
 const start = async () => {
   try {
     await connectDB();
-    app.listen(PORT, () => log.info(`Server running on http://localhost:${PORT}`));
+    server.listen(PORT, () => log.info(`Server running on http://localhost:${PORT}`));
   } catch (err) {
     log.error('Failed to start', err);
     process.exit(1);
